@@ -1,7 +1,6 @@
 package gooz
 
-// #cgo windows && amd64 LDFLAGS: -loo2core_9_win64
-// #cgo !windows LDFLAGS: -loo2core
+// #cgo LDFLAGS: -loo2core
 //
 // #include <stdlib.h>
 // int OodleLZ_Decompress(
