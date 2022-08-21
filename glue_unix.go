@@ -23,6 +23,7 @@ import "C"
 
 import (
 	"fmt"
+	"unsafe"
 )
 
 // Decompress behaves similarly to copy(), but passes the data through the
@@ -30,14 +31,11 @@ import (
 //
 // The size of the output buffer is significant to the decompressor.
 func Decompress(in []byte, out []byte) (int, error) {
-	i_buf := C.CBytes(in)
-	o_buf := C.malloc(C.size_t(len(out)))
-	defer C.free(i_buf)
-	defer C.free(o_buf)
-
 	r := int(C.OodleLZ_Decompress(
-		i_buf, C.size_t(len(in)),
-		o_buf, C.size_t(len(out)),
+		unsafe.Pointer(&in[0]),
+		C.size_t(len(in)),
+		unsafe.Pointer(&out[0]),
+		C.size_t(len(out)),
 		1,   // fuzzSafe = OodleLZ_FuzzSafe_Yes
 		1,   // checkCRC = OodleLZ_CheckCRC_Yes
 		0,   // verbosity = OodleLZ_Verbosity_None
@@ -50,9 +48,13 @@ func Decompress(in []byte, out []byte) (int, error) {
 		3,   // threadPhase = OodleLZ_Decode_ThreadPhaseAll,
 	))
 
-	if r != len(out) {
-		return 0, fmt.Errorf("expected to decompress %d bytes but only got %d", len(out), r)
+	if r < 0 {
+		return 0, fmt.Errorf("OodleLZ_Decompress error %d", r)
 	}
 
-	return copy(out, C.GoBytes(o_buf, C.int(len(out)))), nil
+	if r != len(out) {
+		return 0, fmt.Errorf("expected to decompress %d bytes but got %d", len(out), r)
+	}
+
+	return r, nil
 }
